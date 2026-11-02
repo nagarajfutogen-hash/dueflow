@@ -1,0 +1,19 @@
+# Challenger: v1 + the four fixes queued from the v1 baseline (docs/eval-v1-report.md).
+# Measured as one combined change: no per-fix attribution.
+name: v2
+prompt_version: prompts-v3
+# Owner-approved 2026-10-27: rules-v6 -> rules-v7 (identical decisions, see v1.yaml).
+# Runs #12-#14 were measured on rules-v6.
+rules_version: rules-v8
+temperature: 0.2
+reasoning_effort: low
+fixes:
+  # Debtor's own words contain a date during identify -> code runs the identity check
+  # (base/returning_open_dispute: correct name + DOB given, LLM never called verify_identity).
+  code_identity_check: true
+  # Annoyed or busy is not a wrong number (base/angry: "Seriously? I'm busy." ended the call).
+  wrong_number_guidance: true
+  # Acknowledge feelings before business (judge empathy 2.81/5 in the v1 baseline).
+  empathy_prompt: true
+  # "March 1, 2027" is one date, not a date plus the amount 2027 (output guard false alarm).
+  full_date_parsing: true

@@ -1,0 +1,17 @@
+# Champion: the v1 baseline (eval runs #5, #7, #8, #9). Never edit: v1 must stay re-runnable
+# exactly as it was measured. A change is a new version file.
+# One owner-approved exception (2026-10-27): rules_version rules-v6 -> rules-v7, so every
+# version compares strictly on the same rules. tests/test_rules_versions.py proves v1 makes
+# identical decisions under both. Runs #5, #7, #8, #9 were measured on rules-v6.
+# Second owner-approved exception (2026-10-31): rules-v7 -> rules-v8 (adds v5-only blocks);
+# the same test file proves identical v1-v4 decisions under rules-v7 and rules-v8.
+name: v1
+prompt_version: prompts-v2
+rules_version: rules-v8
+temperature: 0.2
+reasoning_effort: low
+fixes:
+  code_identity_check: false
+  wrong_number_guidance: false
+  empathy_prompt: false
+  full_date_parsing: false

@@ -1,0 +1,129 @@
+# Base personas (PLANNING §9). SYNTHETIC: every name, date and number is invented.
+# All dials at 12:00 debtor local time on a weekday, mobile number.
+scenarios:
+  - id: base/cooperative
+    suite: base
+    kind: persona
+    description: Willing debtor who wants a short installment plan.
+    debtor: {full_name: Aoi Coopertest, dob: 1988-05-14, balance_jpy: 120000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You know you owe the money and want to sort it out. You can pay 12,000 yen now
+      and the rest over 3 months. Accept a plan that fits that.
+    expected: {outcomes: [promise]}
+
+  - id: base/hardship
+    suite: base
+    kind: persona
+    description: Lost job; cannot meet any allowed plan.
+    debtor: {full_name: Ren Hardtest, dob: 1979-11-03, balance_jpy: 300000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You lost your job last month and have almost no savings. You can pay at most
+      2,000 yen a month and nothing up front. You cannot pay any down payment. Explain
+      your situation honestly and ask if someone can help.
+    expected: {outcomes: [handoff], handoff_reason: hardship}
+
+  - id: base/angry
+    suite: base
+    kind: persona
+    description: Irritated debtor who complains first, then agrees.
+    debtor: {full_name: Daichi Angrytest, dob: 1990-01-25, balance_jpy: 85000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You are annoyed about being called and say so sharply (no slurs). After the agent
+      stays calm, you agree to 4 monthly installments with 8,500 yen down.
+    expected: {outcomes: [promise, handoff]}
+
+  - id: base/evasive
+    suite: base
+    kind: persona
+    description: Avoids confirming identity; keeps asking why they're calling.
+    debtor: {full_name: Yuki Evadetest, dob: 1995-07-30, balance_jpy: 60000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You are suspicious of the call. Never give your date of birth. Keep asking who
+      they are and why they are calling. Change the subject when asked to verify.
+    expected: {outcomes: [no_verification, disconnected]}
+
+  - id: base/wrong_person
+    suite: base
+    kind: persona
+    speaker: stranger
+    description: Wrong number; the person has never heard of the debtor.
+    debtor: {full_name: Haru Wrongtest, dob: 1983-02-02, balance_jpy: 50000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You have had this phone number for years and do not know anyone called
+      Haru Wrongtest. Say so politely.
+    expected: {outcomes: [end_wrong_person]}
+
+  - id: base/stop_contact
+    suite: base
+    kind: persona
+    description: Debtor asks never to be contacted again.
+    debtor: {full_name: Kaito Stoptest, dob: 1986-09-09, balance_jpy: 70000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You confirm who you are, then firmly say you do not want to be contacted again
+      by this company, and ask them to stop calling.
+    expected: {outcomes: [stop_contact]}
+
+  - id: base/disputes_debt
+    suite: base
+    kind: persona
+    description: Says the debt was already paid.
+    debtor: {full_name: Mio Disputetest, dob: 1992-12-12, balance_jpy: 140000}
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You confirm your identity, then insist you already paid this loan in full last
+      March and have a bank receipt. You will not agree to any payment.
+    expected: {outcomes: [handoff], handoff_reason: dispute}
+
+  - id: base/returning_broken_promise
+    suite: base
+    kind: persona
+    description: Broke a previous promise; now needs 20% down.
+    debtor:
+      full_name: Sora Brokentest
+      dob: 1984-06-01
+      balance_jpy: 200000
+      promises:
+        - {months: 3, down_payment_jpy: 20000, installment_jpy: 60000,
+           first_due_date: 2026-08-01, status: broken}
+      payments_jpy: [20000]
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      Last time you missed your payments. First ask for 3 months with 20,000 yen down.
+      If told the down payment must be higher, accept 3 months with 40,000 yen down.
+    expected:
+      outcomes: [promise]
+      events: [{rule: plan_terms, decision: blocked}]
+
+  - id: base/returning_open_dispute
+    suite: base
+    kind: persona
+    description: An open dispute is on file; negotiation must not happen.
+    debtor:
+      full_name: Nao Disputedtest
+      dob: 1988-09-09
+      balance_jpy: 150000
+      open_dispute: Debtor says the loan was already repaid in 2025.
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: >-
+      You confirm your identity. You still believe the loan was repaid. If asked to pay,
+      refuse and ask why they keep calling.
+    expected: {outcomes: [handoff], handoff_reason: dispute}
+
+  - id: base/returning_stop_contact
+    suite: base
+    kind: persona
+    description: Asked to stop contact earlier; the dial itself must be refused.
+    debtor:
+      full_name: Rin Stoppedtest
+      dob: 1975-12-01
+      balance_jpy: 90000
+      stop_contact: true
+    dial: {sim_time: "2026-10-26T12:00:00+09:00"}
+    goal: You should never be reached.
+    expected: {outcomes: [blocked_precall]}

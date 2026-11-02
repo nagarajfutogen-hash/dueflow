@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dueflow voice spike</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+  .banner { background: #fff3cd; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; }
+  label, button { margin-right: 8px; }
+  #log { background: #f4f4f4; padding: 8px 12px; border-radius: 6px; min-height: 160px;
+         font: 13px/1.5 ui-monospace, monospace; white-space: pre-wrap; }
+  .state { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="banner">DEV ONLY · WebRTC spike · echo, no LLM · uses Deepgram credit</div>
+<p>Say a short sentence. The server should answer "I heard: …" in the agent's voice.</p>
+<p>
+  <label>API token <input id="token" type="password" size="14"></label>
+  <button id="start">Start</button>
+  <button id="stop" disabled>Stop</button>
+</p>
+<p>ICE: <span id="ice" class="state">–</span> · connection: <span id="conn" class="state">–</span></p>
+<audio id="out" autoplay></audio>
+<div id="log"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+let pc = null, mic = null;
+const t0 = performance.now();
+function log(msg) { $("log").textContent += `${((performance.now() - t0) / 1000).toFixed(1)}s ${msg}\n`; }
+
+function gatheringDone(pc) {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    pc.addEventListener("icegatheringstatechange", () => {
+      if (pc.iceGatheringState === "complete") resolve();
+    });
+  });
+}
+
+$("start").onclick = async () => {
+  const token = $("token").value;
+  try { sessionStorage.setItem("dueflow-token", token); } catch {}
+  $("start").disabled = true;
+  try {
+    mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+    pc = new RTCPeerConnection();
+    pc.oniceconnectionstatechange = () => { $("ice").textContent = pc.iceConnectionState; log(`ice ${pc.iceConnectionState}`); };
+    pc.onconnectionstatechange = () => { $("conn").textContent = pc.connectionState; log(`connection ${pc.connectionState}`); };
+    pc.ontrack = (e) => { $("out").srcObject = e.streams[0]; log("remote audio track received"); };
+    mic.getAudioTracks().forEach((t) => pc.addTrack(t, mic));
+    pc.addTransceiver("video", { direction: "recvonly" });  // keep SmallWebRTC's transceiver order: audio, video
+    await pc.setLocalDescription(await pc.createOffer());
+    await gatheringDone(pc);
+    const candidates = (pc.localDescription.sdp.match(/a=candidate/g) || []).length;
+    log(`offer ready (${candidates} local candidates)`);
+    const res = await fetch("/voice/spike/offer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      body: JSON.stringify({ sdp: pc.localDescription.sdp, type: "offer" }),
+    });
+    if (!res.ok) throw new Error(`offer rejected: HTTP ${res.status}`);
+    const answer = await res.json();
+    const remote = (answer.sdp.match(/a=candidate:\S+ \d+ \S+ \d+ (\S+) (\d+)/g) || [])
+      .map((c) => c.split(" ").slice(4, 6).join(":"));
+    log(`answer received; server candidates: ${remote.join(", ") || "none"}`);
+    await pc.setRemoteDescription(answer);
+    $("stop").disabled = false;
+  } catch (err) {
+    log(`error: ${err.message}`);
+    $("start").disabled = false;
+  }
+};
+
+$("stop").onclick = () => {
+  if (pc) pc.close();
+  if (mic) mic.getTracks().forEach((t) => t.stop());
+  pc = mic = null;
+  $("stop").disabled = true;
+  $("start").disabled = false;
+  log("stopped");
+};
+
+try { $("token").value = sessionStorage.getItem("dueflow-token") || ""; } catch {}
+</script>
+</body>
+</html>

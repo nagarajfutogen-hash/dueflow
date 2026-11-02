@@ -1,0 +1,75 @@
+# Versioned policy values. Change a value -> bump `version`.
+# Modeled on a subset of Japan's Moneylending Business Act Art. 21; not legal advice.
+version: rules-v8
+
+contact_window:
+  start: "08:00"   # inclusive, debtor local time
+  end: "21:00"     # exclusive: 21:00 itself is outside the window
+
+attempt_limits:
+  per_local_day: 1
+  per_rolling_7_days: 3
+
+plan:
+  min_months: 3
+  max_months: 6
+  min_down_payment_pct: 10
+  min_down_payment_pct_after_broken_promise: 20
+  down_payment_due_days: 7     # DEMO ASSUMPTION: down payment due N days after the call (debtor local date)
+
+pay_in_full:
+  max_days_until_payment: 14   # payment date: debtor-local today .. today + N days
+
+identity:
+  max_failed_attempts: 2       # full name + date of birth; then end_wrong_person
+  max_turns_without_attempt: 4 # debtor turns with no stated DOB; then no_verification
+
+# rules-v7: read only by agent versions with the matching fix switch (agent_versions/v3.yaml).
+# v1/v2 never read these lists (tests/test_rules_versions.py proves identical decisions).
+# Matching is on the person's own words: case-, width- and apostrophe-insensitive,
+# word boundaries, "do not"/"dont" read as "don't".
+third_party:
+  # A call ends as a wrong number only if the person said one of these.
+  # {name} = the debtor's full name, first name or family name.
+  wrong_number_phrases: [wrong number, don't know who that is, don't know that person,
+                         "don't know {name}", no one by that name, nobody here by that name,
+                         don't know anyone by that name]
+
+dispute:
+  # After verification, a claim that the debt is already paid goes to a dispute handoff.
+  payment_claim_phrases: [already paid, already repaid, paid this in full, paid it in full,
+                          paid this off, paid it off, owe nothing, don't owe, nothing to pay]
+
+# Output interceptor. Word-boundary, case-insensitive matching. Kept short on purpose:
+# evals catch what these lists miss.
+output_check:
+  # Before identity is verified, none of these (nor any figure) may appear.
+  debt_words: [debt, debts, owe, owed, owing, balance, pay, paid, payment, payments, loan,
+               loans, overdue, arrears, collect, collection, collections, account, installment,
+               installments, outstanding, amount due, repay, repayment]
+  # Threats, legal claims, false urgency: never allowed.
+  banned_phrases: [sue, sued, lawsuit, legal action, court, arrest, police, jail, prison,
+                   garnish, seize, repossess, criminal, illegal, against the law,
+                   legally required, last chance, final warning, final notice, act now,
+                   today only, before it's too late, no other option, tell your employer,
+                   tell your family, ruin your credit]
+  # Relative dates can't match an approved date: never allowed after verification either.
+  relative_date_words: [tomorrow, next week, next month, end of the month, end of month,
+                        monday, tuesday, wednesday, thursday, friday, saturday, sunday,
+                        this weekend]
+
+# rules-v8: read only by agent v5 (agent_versions/v5.yaml). v1-v4 never read these blocks
+# (tests/test_rules_versions.py proves identical decisions under rules-v7 and rules-v8).
+# No discount values exist on purpose: the full balance is always owed (PLANNING §6).
+ladder:
+  max_counter_offers: 2        # engine-chosen counter-offers per call; then a handoff
+
+callback:
+  max_days_ahead: 30           # a customer-requested callback: debtor-local tomorrow .. +N days
+
+claims:
+  # The agent has no interest or fee data: it never says there is none (agent v5 guard).
+  # It says it does not have that detail and a colleague can confirm.
+  unverified_phrases: [no interest, interest-free, interest free, zero interest, "0% interest",
+                       without interest, no fees, no extra fees, no extra charges,
+                       no additional charges, no late fees, no penalty, no penalties]

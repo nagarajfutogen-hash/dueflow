@@ -1,0 +1,39 @@
+# Challenger 3: v3 + human tone (owner-approved 2026-10-30, lifting "no v4").
+# The LLM talks, code checks the facts: approved terms are said in the LLM's own words, the
+# guard checks every figure, and a promise needs every term said first (terms_presented).
+# Identity stays code-controlled. Measured as one combined change: no per-fix attribution.
+name: v4
+prompt_version: prompts-v4
+rules_version: rules-v8
+temperature: 0.6  # 0.4 until 2026-10-30: replies too alike
+reasoning_effort: low
+fixes:
+  code_identity_check: true
+  wrong_number_guidance: true
+  empathy_prompt: true
+  full_date_parsing: true
+  verified_wrong_number: true
+  payment_claim_handoff: true
+  # Approved terms in the LLM's own words (spoken dates); a promise needs them all said.
+  llm_presents_terms: true
+  # Hardship: ask what they can manage; try every allowed plan before a hardship handoff.
+  affordability_first: true
+  # Refuse without repeating the person's figure; kinder fallback after a block (D-008).
+  refusal_wording: true
+  # Kinder fixed lines for verify retry, verified, handoff and stop contact (still code).
+  warm_scripts: true
+  # Added 2026-10-30 (owner-approved "yes fixes"): a blocked reply is rewritten once with
+  # the reason; a plan already offered earlier in the call is never read out again.
+  retry_blocked_reply: true
+  no_repeat_offers: true
+  # Added 2026-10-30 (owner-approved "yes 1-5"): case notes + earlier calls, LLM-written
+  # handoff/promise goodbyes (text), and an approach the LLM picks per customer.
+  customer_context: true
+  llm_goodbyes: true
+  approaches: true
+  # Added 2026-10-30 (owner-approved): "I already paid" is checked against payments on
+  # record (date, amount, method, transaction ID) before any dispute handoff.
+  payment_check: true
+  # Added 2026-10-31 (owner-approved plan, Phase 2): the agent may repeat a relative date the
+  # person said ("I get paid Friday" -> "Friday"); binding dates stay full, code-supplied dates.
+  echo_relative_dates: true

@@ -1,0 +1,11 @@
+# Day 5 voice spike on the VPS only: the API service, no Postgres, host networking so aiortc's
+# ICE candidates are the VPS's own addresses. The API listens on 127.0.0.1 only; the owner
+# reaches it over an SSH tunnel. WebRTC media uses UDP 32768-60999 (opened during the spike).
+#   docker compose -f docker-compose.vps-spike.yml up -d --build
+services:
+  api:
+    build: .
+    env_file: .env.spike
+    network_mode: host
+    command: uvicorn app.main:app --host 127.0.0.1 --port 8000
+    restart: "no"

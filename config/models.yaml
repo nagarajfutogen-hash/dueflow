@@ -1,0 +1,20 @@
+# Model IDs (committed). Secrets stay in .env. Every eval run records these exact IDs.
+# Verified against GET https://api.groq.com/openai/v1/models on 2026-10-24.
+agent:                                # was groq openai/gpt-oss-20b (v1–v3 eval runs)
+  provider: openai
+  model_id: gpt-4.1-mini              # verified 2026-10-30: GET /v1/models + 2-step tool call
+judge:
+  provider: groq
+  model_id: qwen/qwen3.8-27b          # PREVIEW on Groq: pinned exact ID
+simulator:                            # plays the debtor in evals; never the judge's model
+  provider: groq
+  model_id: openai/gpt-oss-120b       # production on Groq
+# Voice (Day 5). Verified against developers.deepgram.com on 2026-10-25: nova-3 streaming STT
+# (Flux, Deepgram's turn-detecting model, is not used: PLANNING uses Pipecat's default VAD);
+# aura-2-thalia-en is the first featured Aura-2 English voice.
+stt:
+  provider: deepgram
+  model_id: nova-3
+tts:
+  provider: deepgram
+  model_id: aura-2-thalia-en

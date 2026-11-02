@@ -1,0 +1,18 @@
+# Challenger 2: v2 + two code-driven fixes from the v2 run (docs/eval-v2-report.md).
+# Measured as one combined change against v1: no per-fix attribution.
+name: v3
+prompt_version: prompts-v3  # same prompts as v2: both v3 fixes are code, not prompt
+rules_version: rules-v8
+temperature: 0.2
+reasoning_effort: low
+fixes:
+  code_identity_check: true
+  wrong_number_guidance: true
+  empathy_prompt: true
+  full_date_parsing: true
+  # Ending as wrong number needs a rules-v7 third_party phrase in the person's own words
+  # (v2: "What do you want?" and "what is this personal matter?" ended calls as wrong number).
+  verified_wrong_number: true
+  # A rules-v7 payment-claim phrase after verification -> dispute handoff by code; the policy
+  # engine rejects a ¥0 "discount" (v2: "I paid this in full" became check_discount_request(0)).
+  payment_claim_handoff: true

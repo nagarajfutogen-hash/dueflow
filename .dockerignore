@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+web/node_modules/
+web/.next/
+# web/out/ is the built admin dashboard: it must be in the image (VPS has no source mount).
+web/*.tsbuildinfo

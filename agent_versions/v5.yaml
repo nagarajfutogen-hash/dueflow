@@ -1,0 +1,54 @@
+# Challenger 4: v4 + the engine's payment ladder (owner-approved 2026-10-31, V5-2).
+# The engine picks every option (pay in full -> standard -> extended -> handoff), the LLM
+# presents one at a time. Customer plan limits come from the file (rules-v8). No discounts.
+# Measured as one combined change against v4 on the same model: no per-fix attribution.
+name: v5
+prompt_version: prompts-v5.12  # 2026-11-03: plan readback + one closing question; v5.11 = handoff reason
+rules_version: rules-v8
+temperature: 0.6  # same as v4: the comparison measures the ladder and prompt
+reasoning_effort: low
+fixes:
+  code_identity_check: true
+  wrong_number_guidance: true
+  empathy_prompt: true
+  full_date_parsing: true
+  verified_wrong_number: true
+  payment_claim_handoff: true
+  # Approved terms in the LLM's own words (spoken dates); a promise needs them all said.
+  llm_presents_terms: true
+  # Hardship: ask what they can manage; try every allowed plan before a hardship handoff.
+  affordability_first: true
+  # Refuse without repeating the person's figure; kinder fallback after a block (D-008).
+  refusal_wording: true
+  # Kinder fixed lines for verify retry, verified, handoff and stop contact (still code).
+  warm_scripts: true
+  # Added 2026-10-30 (owner-approved "yes fixes"): a blocked reply is rewritten once with
+  # the reason; a plan already offered earlier in the call is never read out again.
+  retry_blocked_reply: true
+  no_repeat_offers: true
+  # Added 2026-10-30 (owner-approved "yes 1-5"): case notes + earlier calls, LLM-written
+  # handoff/promise goodbyes (text), and an approach the LLM picks per customer.
+  customer_context: true
+  llm_goodbyes: true
+  approaches: true
+  # Added 2026-10-30 (owner-approved): "I already paid" is checked against payments on
+  # record (date, amount, method, transaction ID) before any dispute handoff.
+  payment_check: true
+  # Added 2026-10-31 (owner-approved plan, Phase 2): the agent may repeat a relative date the
+  # person said ("I get paid Friday" -> "Friday"); binding dates stay full, code-supplied dates.
+  echo_relative_dates: true
+  # Added with v5 (rules-v8): the engine picks every offer down its payment ladder.
+  payment_ladder: true
+  # One question and one option per reply; example replies per approach.
+  one_option_at_a_time: true
+  # Never claim there is no interest or fee (the agent has no such data).
+  no_interest_claims: true
+  # Added 2026-10-31 (V5-3): a callback on a date the customer named; the owner approves it
+  # on the admin dashboard before anyone is called.
+  callbacks: true
+  # Added 2026-11-02 (V5-5, owner-approved after the V5-4 live test): repeat a month and year
+  # the person said. Same version name: v5 has no eval runs yet; prompts-v5.1 marks the change.
+  echo_month_year: true
+  # Added 2026-11-03 (owner request): "Is there anything else I can help you with today?"
+  # before the call ends; a reply gets a scripted close, never a new offer.
+  wrap_up_question: true

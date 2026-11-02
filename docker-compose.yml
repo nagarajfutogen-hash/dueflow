@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No ports: Postgres is reachable only inside the compose network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      WATCHFILES_FORCE_POLLING: "true"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - .:/srv
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Admin dashboard + Failure Lab UI build (Next.js static export -> web/out, served by the
+  # api at /admin-ui).
+  # Not a server: run it when the UI changes.
+  #   docker compose run --rm web
+  web:
+    image: node:22.16.0-alpine
+    profiles: ["tools"]
+    working_dir: /web
+    volumes:
+      - ./web:/web
+    command: sh -c "npm ci --no-audit --no-fund && npm run typecheck && npm run build"
+
+volumes:
+  pgdata:

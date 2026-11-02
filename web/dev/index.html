@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dueflow dev chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --blue:#1b23b8; --muted:#6b6b78; --line:#e4e4ea;
+          --bad:#b42318; --ok:#067647;
+          --serif:"EB Garamond", Georgia, serif; --sans:"Source Sans 3", system-ui, sans-serif;
+          --mono:"IBM Plex Mono", ui-monospace, monospace; }
+  * { box-sizing: border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 var(--sans);
+         display:grid; grid-template-columns:1fr 420px; }
+  /* Left: the call transcript */
+  .call { display:flex; flex-direction:column; min-height:100vh; padding:40px 64px 24px; min-width:0; }
+  header { display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; }
+  .brand { font:500 40px/1 var(--serif); color:var(--blue); margin:0; }
+  .tagline { font:20px var(--serif); color:var(--blue); }
+  #log { flex:1; overflow-y:auto; margin:32px 0 16px; display:flex; flex-direction:column; gap:14px; }
+  .line { display:grid; grid-template-columns:140px 1fr; gap:16px; align-items:baseline; }
+  .who { font:12px var(--mono); letter-spacing:.12em; color:var(--muted); }
+  .who.ai { color:var(--blue); }
+  .who small { display:block; font-size:10px; letter-spacing:.04em; color:var(--muted); opacity:.8; }
+  .text { font-size:24px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .agent .text { color:var(--blue); }
+  .note .text { font:12px/1.5 var(--mono); color:var(--muted); }
+  .note.bad .text { color:var(--bad); } .note.ok .text { color:var(--ok); }
+  .caret::after { content:""; display:inline-block; width:2px; height:1em; margin-left:2px;
+                  background:var(--blue); vertical-align:-0.15em; animation:blink 1s step-end infinite; }
+  .thinking .text::after { content:"···"; letter-spacing:.2em; animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  @keyframes pulse { 50% { opacity:.25; } }
+  #chat { display:flex; gap:10px; border-top:1px solid var(--line); padding-top:16px; }
+  #say { flex:1; min-width:0; font:20px var(--sans); border:0; outline:0; padding:8px 0; background:transparent; color:var(--fg); }
+  .foot { font:12px var(--mono); color:var(--muted); margin-top:16px; letter-spacing:.03em; }
+  /* Right: controls on the blue panel */
+  aside { background:var(--blue); color:#fff; padding:40px 48px; display:flex; flex-direction:column; gap:24px;
+          font-family:var(--mono); }
+  aside h2 { font:600 30px/1.3 var(--mono); margin:40px 0 0; }
+  aside p { font-size:13px; line-height:1.7; margin:0; opacity:.92; }
+  #dial { display:flex; flex-direction:column; gap:12px; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.9; }
+  aside input, aside select { font:14px var(--mono); padding:8px 10px; border:1px solid rgba(255,255,255,.5);
+                              background:transparent; color:#fff; border-radius:0; }
+  aside select option { color:#1a1a1a; }
+  button { font:14px var(--mono); letter-spacing:.06em; padding:12px 22px; cursor:pointer; border-radius:0; }
+  .solid { background:#fff; color:var(--blue); border:1px solid #fff; align-self:flex-start; }
+  .ghost { background:transparent; color:var(--blue); border:1px solid var(--blue); }
+  button:disabled { opacity:.35; cursor:default; }
+  .banner { margin-top:auto; font-size:11px; opacity:.75; }
+  #card { border:1px solid rgba(255,255,255,.5); padding:14px 16px; font-size:13px; line-height:1.7; }
+  #card h3 { margin:0 0 6px; font:600 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; opacity:.8; }
+  #card dl { display:grid; grid-template-columns:auto 1fr; gap:2px 12px; margin:0; }
+  #card dt { opacity:.7; } #card dd { margin:0; overflow-wrap:anywhere; }
+  details { font-size:13px; } summary { cursor:pointer; letter-spacing:.06em; }
+  details p { font-size:12px; } details code { overflow-wrap:anywhere; }
+  details a { color:#fff; display:block; margin-bottom:8px; }
+  #csv { font:12px var(--mono); color:#fff; margin-bottom:8px; max-width:100%; }
+  @media (max-width: 860px) {
+    body { grid-template-columns:1fr; }
+    aside { order:-1; padding:24px 16px; } aside h2 { margin:0; font-size:22px; }
+    .call { padding:24px 16px; min-height:auto; }
+    .line { grid-template-columns:1fr; gap:2px; } .text { font-size:19px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .caret::after, .thinking .text::after { animation:none; } }
+</style>
+</head>
+<body>
+<section class="call">
+  <header><p class="brand">dueflow</p><span class="tagline">The LLM proposes. The policy engine decides.</span></header>
+  <div id="log" aria-live="polite"></div>
+  <form id="chat">
+    <input id="say" placeholder="Reply as the debtor…" autocomplete="off" disabled>
+    <button id="send" class="ghost" disabled>Send</button>
+    <button id="hangup" class="ghost" type="button" disabled>End call</button>
+  </form>
+  <div class="foot">DEV ONLY · SYNTHETIC debtors · HUMAN TEST label · every agent reply uses LLM tokens</div>
+</section>
+<aside>
+  <h2>Test a collection call.</h2>
+  <p>Pick a synthetic debtor and dial. Agent lines are checked by the policy engine before they appear.</p>
+  <form id="dial">
+    <label>API token <input id="token" type="password" required></label>
+    <label>Debtor <select id="ref"><option value="auto">Auto · next free debtor</option></select></label>
+    <label>Version <select id="version"><option>v5</option><option>v4</option><option>v3</option><option>v2</option><option>v1</option></select></label>
+    <button class="solid" type="submit">Dial</button>
+  </form>
+  <div id="card" hidden></div>
+  <details>
+    <summary>Add test debtors (CSV)</summary>
+    <p>Columns: <code>ref,full_name,dob,balance_jpy,timezone,mobile,home,work,stop_contact,no_workplace_contact,workplace_justification,open_dispute,notes</code>.
+       Required: ref, full_name, dob (YYYY-MM-DD), balance_jpy (whole yen). notes: background for the agent (max 500 characters, never read out). Existing refs are skipped.
+       Synthetic people only.</p>
+    <a id="template" download="debtors-template.csv">Download template</a>
+    <input id="csv" type="file" accept=".csv,text/csv">
+    <button id="upload" class="solid" type="button">Upload</button>
+    <p id="upload-result"></p>
+  </details>
+  <div class="banner">Policy decisions and tool results show as small grey lines.</div>
+</aside>
+<script>
+const $ = (id) => document.getElementById(id);
+const CHAR_MS = 22;  // typing speed for agent lines
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let ws = null;
+let queue = Promise.resolve();  // lines appear in arrival order, each after the last finished typing
+let thinking = null;
+
+function scroll() { $("log").scrollTop = $("log").scrollHeight; }
+
+function row(cls, who, sub) {
+  const div = document.createElement("div");
+  div.className = "line " + cls;
+  const w = document.createElement("div");
+  w.className = "who" + (cls.startsWith("agent") || cls === "thinking" ? " ai" : "");
+  w.textContent = who;
+  if (sub) { const s = document.createElement("small"); s.textContent = sub; w.append(s); }
+  const t = document.createElement("div");
+  t.className = "text";
+  div.append(w, t);
+  return [div, t];
+}
+
+function typeInto(el, text) {
+  if (reduced) { el.textContent = text; return Promise.resolve(); }
+  el.classList.add("caret");
+  return new Promise((done) => {
+    let i = 0;
+    const step = () => {
+      i += 1;
+      el.textContent = text.slice(0, i);
+      scroll();
+      if (i < text.length) setTimeout(step, CHAR_MS);
+      else { el.classList.remove("caret"); done(); }
+    };
+    step();
+  });
+}
+
+function stopThinking() { if (thinking) { thinking.remove(); thinking = null; } }
+function startThinking() {
+  stopThinking();
+  [thinking] = row("thinking", "AI");
+  $("log").append(thinking); scroll();
+}
+
+// cls: agent | me | note [ok|bad]
+function add(cls, text, who, sub) {
+  queue = queue.then(() => {
+    if (cls === "agent") stopThinking();
+    const [div, t] = row(cls, who, sub);
+    if (thinking) $("log").insertBefore(div, thinking); else $("log").append(div);
+    if (cls === "agent") return typeInto(t, text);
+    t.textContent = text; scroll();
+  });
+}
+const note = (text, tone) => add("note" + (tone ? " " + tone : ""), text, "");
+
+const AUTH = () => ({ "Authorization": "Bearer " + $("token").value });
+const yen = (n) => "¥" + Number(n).toLocaleString("en-US");
+
+
+async function loadDebtors() {
+  if (!$("token").value) return;
+  const res = await fetch("/debtors", { headers: AUTH() });
+  if (!res.ok) return;
+  const keep = $("ref").value;
+  $("ref").replaceChildren(new Option("Auto · next free debtor", "auto"),
+                           ...(await res.json()).map((r) => new Option(r, r)));
+  $("ref").value = [...$("ref").options].some((o) => o.value === keep) ? keep : "auto";
+}
+$("token").addEventListener("change", loadDebtors);
+
+async function showCard(ref, simTime) {
+  const res = await fetch("/debtors/" + encodeURIComponent(ref), { headers: AUTH() });
+  if (!res.ok) { $("card").hidden = true; return; }
+  const d = await res.json();
+  const facts = [
+    ["Name", d.full_name], ["Date of birth", d.dob], ["Owes", yen(d.balance_jpy)],
+    ["Paid so far", yen(d.payments_total_jpy)], ["Timezone", d.timezone],
+    ["Call time", simTime || ""], ["Phones", d.phones.join(", ")],
+    ["Case", d.persona || "imported"],
+  ];
+  if (d.has_open_dispute) facts.push(["Dispute", "open"]);
+  if (d.has_broken_promise) facts.push(["Promise", "broken before"]);
+  if (d.stop_contact) facts.push(["Contact", "asked to stop"]);
+  if (d.no_workplace_contact) facts.push(["Work calls", "not allowed"]);
+  if (d.notes) facts.push(["Notes", d.notes]);
+  for (const p of d.payments || []) {
+    facts.push(["Paid", `${yen(p.amount_jpy)} on ${p.paid_on}` +
+      (p.method ? ` · ${p.method.replace("_", " ")}` : "") + (p.reference ? ` · ${p.reference}` : "")]);
+  }
+  const h = document.createElement("h3"); h.textContent = "You are playing " + d.ref;
+  const dl = document.createElement("dl");
+  for (const [k, v] of facts) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    dl.append(dt, dd);
+  }
+  $("card").replaceChildren(h, dl);
+  $("card").hidden = false;
+}
+
+const TEMPLATE = [
+  "ref,full_name,dob,balance_jpy,timezone,mobile,home,work,stop_contact,no_workplace_contact,workplace_justification,open_dispute,notes",
+  "C-101,Ren Example,1991-06-15,95000,Asia/Tokyo,090-0000-0101,,,false,false,,,Freelancer; paid late twice; prefers short calls",
+  "C-102,Nana Sample,1984-02-28,240000,Asia/Tokyo,090-0000-0102,03-0000-0102,,false,true,,Says the amount is wrong,",
+].join("\n") + "\n";
+$("template").href = "data:text/csv;charset=utf-8," + encodeURIComponent(TEMPLATE);
+
+$("upload").addEventListener("click", async () => {
+  const file = $("csv").files[0];
+  if (!file) { $("upload-result").textContent = "Choose a CSV file first."; return; }
+  const res = await fetch("/debtors/import", {
+    method: "POST", headers: { ...AUTH(), "Content-Type": "text/csv" }, body: await file.text(),
+  });
+  const body = await res.json();
+  $("upload-result").textContent = res.ok
+    ? `Added ${body.added.length}: ${body.added.join(", ") || "none"}. Skipped ${body.skipped.length} (already there).`
+    : "Not imported: " + [].concat(body.detail).join("; ");
+  if (res.ok) loadDebtors();
+});
+
+function setChat(on) {
+  $("say").disabled = !on; $("send").disabled = !on; $("hangup").disabled = !on;
+  if (on) $("say").focus();
+}
+$("hangup").addEventListener("click", () => {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "hangup" }));
+});
+
+$("dial").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (ws) ws.close();
+  stopThinking();
+  queue = Promise.resolve();
+  $("log").replaceChildren();
+  const token = $("token").value;
+  try { sessionStorage.setItem("dueflow-token", token); } catch {}
+  // The server always picks the time (next free slot in the debtor's window) and number.
+  const chosen = $("ref").value === "auto" ? null : $("ref").value;
+  const res = await fetch("/calls/auto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...AUTH() },
+    body: JSON.stringify({ debtor_ref: chosen, agent_version: $("version").value, label: "HUMAN_TEST" }),
+  });
+  const body = await res.json();
+  if (!res.ok) { note("Dial failed: " + JSON.stringify(body.detail ?? body), "bad"); return; }
+  note(`${chosen ? "Dialing" : "Auto picked"} ${body.debtor_ref} · ${body.target} · ${body.sim_time}`);
+  showCard(body.debtor_ref, body.sim_time);
+  for (const d of body.decisions) note(`${d.rule}: ${d.reason}`, d.allowed ? "ok" : "bad");
+  if (!body.allowed) { note("Pre-call check blocked the dial. No conversation created.", "bad"); return; }
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/chat/ws?conversation_id=${body.conversation_id}`);
+  ws.onopen = () => { ws.send(JSON.stringify({ type: "auth", token })); setChat(true); };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "agent") add("agent", m.text, "AI", m.source === "script" ? "script" : "llm · guarded");
+    else if (m.type === "tool") note(`${m.name} → ${JSON.stringify(m.result)}`);
+    else if (m.type === "end") { stopThinking(); note("Call ended: " + m.outcome); setChat(false); }
+    else if (m.type === "error") { stopThinking(); note(m.error, "bad"); }
+  };
+  ws.onclose = (ev) => { stopThinking(); setChat(false); if (ev.reason) note("Closed: " + ev.reason, "bad"); };
+});
+
+$("chat").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = $("say").value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "user", text }));
+  add("me", text, "CUSTOMER");
+  queue = queue.then(startThinking);
+  $("say").value = "";
+});
+
+try { $("token").value = sessionStorage.getItem("dueflow-token") || ""; } catch {}
+loadDebtors();
+</script>
+</body>
+</html>

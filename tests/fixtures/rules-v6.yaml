@@ -1,0 +1,43 @@
+# Versioned policy values. Change a value -> bump `version`.
+# Modeled on a subset of Japan's Moneylending Business Act Art. 21; not legal advice.
+version: rules-v6
+
+contact_window:
+  start: "08:00"   # inclusive, debtor local time
+  end: "21:00"     # exclusive: 21:00 itself is outside the window
+
+attempt_limits:
+  per_local_day: 1
+  per_rolling_7_days: 3
+
+plan:
+  min_months: 3
+  max_months: 6
+  min_down_payment_pct: 10
+  min_down_payment_pct_after_broken_promise: 20
+  down_payment_due_days: 7     # DEMO ASSUMPTION: down payment due N days after the call (debtor local date)
+
+pay_in_full:
+  max_days_until_payment: 14   # payment date: debtor-local today .. today + N days
+
+identity:
+  max_failed_attempts: 2       # full name + date of birth; then end_wrong_person
+  max_turns_without_attempt: 4 # debtor turns with no stated DOB; then no_verification
+
+# Output interceptor. Word-boundary, case-insensitive matching. Kept short on purpose:
+# evals catch what these lists miss.
+output_check:
+  # Before identity is verified, none of these (nor any figure) may appear.
+  debt_words: [debt, debts, owe, owed, owing, balance, pay, paid, payment, payments, loan,
+               loans, overdue, arrears, collect, collection, collections, account, installment,
+               installments, outstanding, amount due, repay, repayment]
+  # Threats, legal claims, false urgency: never allowed.
+  banned_phrases: [sue, sued, lawsuit, legal action, court, arrest, police, jail, prison,
+                   garnish, seize, repossess, criminal, illegal, against the law,
+                   legally required, last chance, final warning, final notice, act now,
+                   today only, before it's too late, no other option, tell your employer,
+                   tell your family, ruin your credit]
+  # Relative dates can't match an approved date: never allowed after verification either.
+  relative_date_words: [tomorrow, next week, next month, end of the month, end of month,
+                        monday, tuesday, wednesday, thursday, friday, saturday, sunday,
+                        this weekend]
